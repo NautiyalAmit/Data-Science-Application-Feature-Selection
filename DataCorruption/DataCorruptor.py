@@ -7,16 +7,15 @@ from random import randrange
 
 class NumericDataCorruptor:
     def __init__(self, data, feature_stats, feature_cols, log=False):
-        self.data = data
+        self.data = data.copy()
         self.feature_stats = feature_stats
         self.feature_cols = feature_cols
 
         self.log = log
         self.probability_of_error = 0.95
 
-        self.corrupted_cells_dict = {}
-        for feature in self.feature_cols:
-            self.corrupted_cells_dict[feature] = set()
+        self.corrupted_cells_mask = pd.DataFrame(0, index=np.arange(data.shape[0]), columns=feature_cols)
+
 
     def _switch_column_values(self, row, column_target):
         """This function is swiching values between two columns """
@@ -76,7 +75,7 @@ class NumericDataCorruptor:
 
     def _corrupt_value_by_column(self, row, col_name):
         if random.random() < self.probability_of_error:
-
+            #TODO: here add functions to corrupt categroical data
             draw = choice([self._switch_column_values,
                            self._add_noise, self._insert_nan,
                            self._introduce_outlier], 1,
@@ -101,17 +100,19 @@ class NumericDataCorruptor:
         return self.data
 
     def get_random_indices(self):
-        return randrange(self.data.shape[1]),randrange(self.data.shape[0])
-    def get_dataset_with_corrupted_cell(self):
-        col_idx,row_idx = self.get_random_indices()
-        col_name = self.feature_cols[col_idx]
+        return randrange(self.data.shape[1]), randrange(self.data.shape[0])
 
-        if col_idx not in self.corrupted_cells_dict[col_name]:
-            self.corrupted_cells_dict[col_name].add(col_idx)
-            row_with_corrupted_cell = self._corrupt_value_by_column(self.data.loc[row_idx], col_name)
-            self.data.loc[row_idx] = row_with_corrupted_cell
+    def get_dataset_with_corrupted_cell(self):
+        col_idx, row_idx = self.get_random_indices()
+        col_name = self.feature_cols[col_idx]
+        if self.corrupted_cells_mask.iat[row_idx,col_idx] == 0:
+            self.corrupted_cells_mask.iat[row_idx,col_idx] = 1
+            row_to_corrupt = self.data.iloc[row_idx]
+            row_with_corrupted_cell = self._corrupt_value_by_column(row_to_corrupt, col_name)
+            self.data.iloc[row_idx] = row_with_corrupted_cell
         else:
-            print('Skipping because this cell was already corrupted ')
+            return self.get_dataset_with_corrupted_cell()
+            #print('Skipping because this cell was already corrupted ')
 
         return self.data
 
@@ -126,4 +127,4 @@ data_corruptor = NumericDataCorruptor(df, feature_stats, df.columns.tolist())
 print(data_corruptor.get_dataset_with_corrupted_cell())
 print(data_corruptor.get_dataset_with_corrupted_cell())
 print(data_corruptor.get_dataset_with_corrupted_cell())
-print(data_corruptor.corrupted_cells_dict)
+print(data_corruptor.corrupted_cells_mask)
