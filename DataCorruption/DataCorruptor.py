@@ -94,25 +94,26 @@ class NumericDataCorruptor:
         if col_name not in self.feature_cols:
             raise ValueError("Column name is not present in the data")
         self.probability_of_error = error_proba
-        # assert ptypes.is_numeric_dtype(self.data[col_name])
+
         print('Corrutping %.2f percent of : %s' % (error_proba, col_name))
         self.data = self.data.apply(self._corrupt_value_by_column, axis=1, args=(col_name,))  # Iterate over all cols
         return self.data
 
     def get_random_indices(self):
-        return randrange(self.data.shape[1]), randrange(self.data.shape[0])
+        """This function returns a pair for integer indices that are not yet corrupted."""
+        col_ix, row_ix = randrange(self.data.shape[1]), randrange(self.data.shape[0])
+        # While the selected cell is already corrupted, keep "rolling the dice" until we find one that is not corrupted.
+        while self.corrupted_cells_mask.iat[row_ix,col_ix] == 1:
+            col_ix, row_ix = randrange(self.data.shape[1]), randrange(self.data.shape[0])
+        self.corrupted_cells_mask.iat[row_ix, col_ix] = 1
+        return col_ix, row_ix
 
     def get_dataset_with_corrupted_cell(self):
         col_idx, row_idx = self.get_random_indices()
-        col_name = self.feature_cols[col_idx]
-        if self.corrupted_cells_mask.iat[row_idx,col_idx] == 0:
-            self.corrupted_cells_mask.iat[row_idx,col_idx] = 1
-            row_to_corrupt = self.data.iloc[row_idx]
-            row_with_corrupted_cell = self._corrupt_value_by_column(row_to_corrupt, col_name)
-            self.data.iloc[row_idx] = row_with_corrupted_cell
-        else:
-            return self.get_dataset_with_corrupted_cell()
-            #print('Skipping because this cell was already corrupted ')
+
+        row_with_corrupted_cell = self._corrupt_value_by_column(self.data.iloc[row_idx],
+                                                                self.feature_cols[col_idx])
+        self.data.iloc[row_idx] = row_with_corrupted_cell
 
         return self.data
 
