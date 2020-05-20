@@ -4,6 +4,8 @@ from numpy.random import choice
 import random
 from random import randrange
 
+np.random.seed(0)
+random.seed(0)
 
 class NumericDataCorruptor:
     def __init__(self, data, feature_stats, feature_cols, log=False):
