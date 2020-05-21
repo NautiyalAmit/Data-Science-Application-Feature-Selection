@@ -4,16 +4,8 @@ from numpy.random import choice
 import random
 from random import randrange
 
-np.random.seed(0)
-RAND=random.randint(1, 1000)
-#RANDOM=np.random.random()
-    #RANDOM_NORMAL=np.random.normal(row[column_target], sigma, 1)
-
 
 class NumericDataCorruptor:
-    
-    
-    #print("########CLASS############",RAND)
     def __init__(self, data, feature_stats, feature_cols, log=False):
         self.data = data.copy()
         self.feature_stats = feature_stats
@@ -53,6 +45,7 @@ class NumericDataCorruptor:
         return row
 
     def _add_noise(self, row, column_target):
+
         mu, sigma = self.feature_stats.loc[column_target][['mean', 'std']].to_numpy()
         noise = np.random.normal(row[column_target], sigma, 1)
         if self.log:
@@ -70,14 +63,10 @@ class NumericDataCorruptor:
         """
         # print('introduce outliers')
         sigma, maximum, minimum = self.feature_stats.loc[column_target][['std', 'max', 'min']].to_numpy()
-        if  np.random.random() < 0.5:
-            #print("############INTRODUCE OUTLIER IF ########",RAND)
-
-            outlier = maximum + (np.random.random() * sigma)
+        if random.random() < 0.5:
+            outlier = maximum + (random.random() * sigma)
         else:
-            
-            #print("############INTRODUCE OUTLIER ELSE########",RAND)
-            outlier = minimum - (np.random.random() * sigma)
+            outlier = minimum - (random.random() * sigma)
         if self.log:
             print('>>> Adding outliers insted of {} => {}'.format(row[column_target], outlier))
         row[column_target] = outlier
@@ -85,8 +74,7 @@ class NumericDataCorruptor:
         return row
 
     def _corrupt_value_by_column(self, row, col_name):
-        #print("########CORRUPT VAL BY COLn############",RAND)
-        if np.random.random() < self.probability_of_error:
+        if random.random() < self.probability_of_error:
             #TODO: here add functions to corrupt categroical data
             draw = choice([self._switch_column_values,
                            self._add_noise, self._insert_nan,
