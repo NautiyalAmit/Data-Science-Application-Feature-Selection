@@ -4,7 +4,7 @@ from numpy.random import choice
 import random
 from random import randrange
 
-np.random.seed(0)
+np.random.seed(10)
 RAND=random.randint(1, 1000)
 #RANDOM=np.random.random()
     #RANDOM_NORMAL=np.random.normal(row[column_target], sigma, 1)
