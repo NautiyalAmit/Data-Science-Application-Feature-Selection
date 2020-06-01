@@ -149,8 +149,8 @@ class DataCorruptor:
         if col_name not in self.feature_cols:
             raise ValueError("Column name is not present in the data")
         self.probability_of_error = error_proba
-
-        print('Corrutping %.2f percent of : %s' % (error_proba, col_name))
+        if self.log:
+            print('Corrutping %.2f percent of : %s' % (error_proba, col_name))
         self.data = self.data.apply(self._corrupt_value_by_column, axis=1, args=(col_name,))  # Iterate over all cols
         return self.data
 
@@ -173,7 +173,7 @@ class DataCorruptor:
         return self.data
 
 
-df = pd.DataFrame([[30, 20, 0.1, 'lol'], [10, 50, 0.5, 'omg'], [15, 30, 0.2, 'wtf']],
+df = pd.DataFrame([[30, 20, 0.1, 'lmao'], [10, 50, 0.5, 'omfg'], [15, 30, 0.2, 'wtfp']],
                   columns=['A', 'B', 'C', "D"])
 
 data_corruptor = DataCorruptor(df, df.columns.tolist())
