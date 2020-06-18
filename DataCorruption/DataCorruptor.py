@@ -125,17 +125,20 @@ class DataCorruptor:
     def _corrupt_value_by_column(self, row, col_name):
 
         if is_numeric_dtype(self.data[col_name]):
-            draw = choice([self._switch_column_values,
-                           self._add_noise, self._insert_nan,
-                           self._introduce_outlier], 1,
-                          p=[0.25, 0.25, 0.25, .25])[0]
+            draw = choice([#self._switch_column_values,
+                          # self._add_noise,
+                        self._insert_nan,
+                        #self._introduce_outlier
+            ], 1,
+                          p=[ 1])[0]
             return draw(row, col_name)
 
         elif is_string_dtype(self.data[col_name]):
             draw = choice([self._insert_empty_string,
-                           self._delete_random_char,
-                           self._replace_char_close_on_keyboard,
-                           self._swap_random_char], 1, p=[.25, .25, .25, .25])[0]
+                           #self._delete_random_char,
+                           self._replace_char_close_on_keyboard
+                           #self._swap_random_char
+             ], 1, p=[.5,.5])[0]
 
             return draw(row, col_name)
 
@@ -173,15 +176,15 @@ class DataCorruptor:
         return self.data
 
 
-df = pd.DataFrame([[30, 20, 0.1, 'lmao'], [10, 50, 0.5, 'omfg'], [15, 30, 0.2, 'wtfp']],
-                  columns=['A', 'B', 'C', "D"])
+#print('Quick smoke test')    
+#df = pd.DataFrame([[30, 20, 0.1, 'lmao'], [10, 50, 0.5, 'omfg'], [15, 30, 0.2, 'wtfp']], columns=['A', 'B', 'C', "D"])
 
-data_corruptor = DataCorruptor(df, df.columns.tolist())
+#data_corruptor = DataCorruptor(df, df.columns.tolist())
 
 # print(data_corruptor.get_dataset_with_corrupted_cell())
 # print(data_corruptor.get_dataset_with_corrupted_cell())
 
-data_corruptor.get_dataset_with_corrupted_cell()
-data_corruptor.get_dataset_with_corrupted_cell()
-print(data_corruptor.get_dataset_with_corrupted_cell())
-print(data_corruptor.corrupted_cells_mask)
+#data_corruptor.get_dataset_with_corrupted_cell()
+#data_corruptor.get_dataset_with_corrupted_cell()
+#print(data_corruptor.get_dataset_with_corrupted_cell())
+#print(data_corruptor.corrupted_cells_mask)
