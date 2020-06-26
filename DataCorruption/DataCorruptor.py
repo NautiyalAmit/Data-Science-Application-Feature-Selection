@@ -142,7 +142,7 @@ class DataCorruptor:
 
             return draw(row, col_name)
 
-    def get_dataset_with_corrupted_col(self, col_name, error_proba=0.95):
+    def get_dataset_with_corrupted_col(self, col_name, error_proba=0.15):
         """
         This function return DataFrame with a given collumn corrupted to a degree controlled by error_proba value.
         :param col_name:
