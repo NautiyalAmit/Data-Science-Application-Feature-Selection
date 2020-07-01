@@ -159,22 +159,50 @@ class DataCorruptor:
 
     def get_random_indices(self):
         """This function returns a pair for integer indices that are not yet corrupted."""
-        col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
+        #col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
         # While the selected cell is already corrupted, keep "rolling the dice" until we find one that is not corrupted.
-        while self.corrupted_cells_mask.iat[row_ix, col_ix] == 1:
-            col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
-        self.corrupted_cells_mask.iat[row_ix, col_ix] = 1
-        return col_ix, row_ix
+        #while self.corrupted_cells_mask.iat[row_ix, col_ix] == 1:
+        #    col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
+        #return col_ix, row_ix
+
+        non_corrupted_row_col_pairs =[]
+        for col_idx in range(self.data.shape[1]):
+           non_corrupted_cell_row_idx_list = self.data.iloc[:,col_idx].index[self.corrupted_cells_mask.iloc[:,col_idx] == 0].tolist()
+           non_corrupted_row_col_pairs_for_col_idx = list(map(lambda row_index: (self.data.index.get_loc(row_index), col_idx), non_corrupted_cell_row_idx_list))
+           non_corrupted_row_col_pairs.extend(non_corrupted_row_col_pairs_for_col_idx)
+
+        rand_idx = np.random.randint(len(non_corrupted_row_col_pairs), size=1)[0]
+        return non_corrupted_row_col_pairs[rand_idx]
+
 
     def get_dataset_with_corrupted_cell(self):
-        col_idx, row_idx = self.get_random_indices()
+        row_idx,col_idx = self.get_random_indices()
 
         row_with_corrupted_cell = self._corrupt_value_by_column(self.data.iloc[row_idx],
                                                                 self.feature_cols[col_idx])
         self.data.iloc[row_idx] = row_with_corrupted_cell
+        self.corrupted_cells_mask.iat[self.data.index.get_loc(row_idx), col_idx] = 1
 
         return self.data
 
+
+    def get_random_row_index(self,col_idx):
+
+        non_corrupted_cell_row_idx_list = self.data.iloc[:,col_idx].index[self.corrupted_cells_mask.iloc[:,col_idx] == 0].tolist()
+        row_idx = np.random.choice(non_corrupted_cell_row_idx_list, 1)[0]
+        return row_idx
+
+    def get_dataset_with_corrupted_cell_in_column(self,col_name):
+        if col_name not in self.feature_cols:
+            raise ValueError("Column name is not present in the data")
+        col_idx = self.feature_cols.index(col_name)
+        row_idx = self.get_random_row_index(col_idx)
+        row_with_corrupted_cell = self._corrupt_value_by_column(self.data.loc[row_idx],
+                                                                self.feature_cols[col_idx])
+        self.data.loc[row_idx] = row_with_corrupted_cell
+
+        self.corrupted_cells_mask.iat[self.data.index.get_loc(row_idx), col_idx] = 1
+        return self.data
 
 #print('Quick smoke test')    
 #df = pd.DataFrame([[30, 20, 0.1, 'lmao'], [10, 50, 0.5, 'omfg'], [15, 30, 0.2, 'wtfp']], columns=['A', 'B', 'C', "D"])

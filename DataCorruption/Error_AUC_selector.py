@@ -69,7 +69,7 @@ def split_fit_corrupt_measure(X,y, train_index, test_index, list_without_feature
 
 def error_backward_selection(X, y):
     res_dict = {}
-    kf = KFold(n_splits=5)
+    kf = KFold(n_splits=10)
     initial_features = X.columns.tolist()
     selected_features = initial_features[:]  # Copy
     print("Having {} folds and {} CPU cores".format(10,mp.cpu_count() - 1))
@@ -133,7 +133,8 @@ def error_backward_selection(X, y):
         else:
 
             print("Done.")
-            print("Top features with the score {} are :".format(top_score))
+            print("Top {} out of {} features with the score {} are :".format(len(selected_features),
+                                                                             len(initial_features), top_score))
             print(selected_features)
             break
         print("Currently best score is: {} \n Looking for better representation. ".format(top_score))
