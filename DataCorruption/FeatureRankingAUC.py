@@ -13,6 +13,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.compose import ColumnTransformer
 
 
+from sklearn.feature_selection import RFE
+from sklearn.svm import SVR
+estimator = LogisticRegression
+
+
 def get_pipeline(X, model=None):
     """Get a sklearn pipeline that is adjusted to the dataset X """
     numeric_features = X.select_dtypes(include="number").columns.to_list()
@@ -65,8 +70,8 @@ def load_clean_airbnb_data():
     df = pd.read_csv('../Amit/Airbnb/clean_train.csv')
     df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
     df = df.reset_index()
-    y = df['Price']
-    X = df.drop(['Price', 'index'], axis=1)
+    y = df['Rating']
+    X = df.drop(['Rating', 'index'], axis=1)
 
     return X, y
 
@@ -76,8 +81,8 @@ def load_dirty_airbnb_data():
     df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
     df = df.reset_index()
 
-    y = df['Price']
-    X = df.drop(['Price', 'index'], axis=1)
+    y = df['Rating']
+    X = df.drop(['Rating', 'index'], axis=1)
     return X, y
 
 X,y = load_clean_airbnb_data()
@@ -91,13 +96,25 @@ pipeline = get_pipeline(X_train)
 airbnb_cols = X_train.columns
 results = []
 
+#### BASELINE CASES #####
+pipeline.fit(X_train, y_train)
+print("Baseline performance with all columns",pipeline.score(X_test, y_test))
+
 for col in airbnb_cols:
     fitted_pipeline = pipeline.fit(X_train, y_train)
-    print('Trying out: ' + col)
-    results_df = measure_error_auc(fitted_pipeline, X_test, y_test, airbnb_cols, col)
-    results.append([col, results_df])
+    result = measure_error_auc(fitted_pipeline, X_test, y_test, airbnb_cols, col)
+    print('Trying out: {} : {}'.format(col,result))
+
+    results.append([col, result])
 
 print(pd.DataFrame(results, columns=['column', 'score']).sort_values(by='score', ascending=False))
+
+
+top_5_auc_feature_ranking = []
+top_10_auc_feature_ranking = []
+
+top_10_rfe = []
+
 
 # X,y = load_data()
 #

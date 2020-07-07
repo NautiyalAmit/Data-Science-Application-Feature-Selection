@@ -154,7 +154,27 @@ def load_data():
     return X, y
 
 
-X, y = load_data()
+def load_clean_airbnb_data():
+    df = pd.read_csv('../Amit/Airbnb/clean_train.csv')
+    df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
+    df = df.reset_index()
+    y = df['Price']
+    X = df.drop(['Price', 'index'], axis=1)
+
+    return X, y
+
+
+def load_dirty_airbnb_data():
+    df = pd.read_csv('../Amit/Airbnb/dirty_test.csv')
+    df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
+
+    y = df['Rating']
+    X = df.drop(['Rating'], axis=1)
+    return X, y
+
+
+#X, y = load_data()
+X, y = load_clean_airbnb_data()
 
 feature_cols = X.columns.to_list()
 
