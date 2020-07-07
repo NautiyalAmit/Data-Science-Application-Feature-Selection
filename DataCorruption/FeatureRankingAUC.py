@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.compose import ColumnTransformer
 
+
 def get_pipeline(X, model=None):
     """Get a sklearn pipeline that is adjusted to the dataset X """
     numeric_features = X.select_dtypes(include="number").columns.to_list()
@@ -37,13 +38,13 @@ def get_pipeline(X, model=None):
                            ('classifier', model)])
 
 
-
-def measure_error_auc(clf, X_test, y_test, feature_cols,column_to_test):
-    data_corruptor = DataCorruptor(X_test, feature_cols,log=False)
+def measure_error_auc(clf, X_test, y_test, feature_cols, column_to_test):
+    data_corruptor = DataCorruptor(X_test, feature_cols, log=False)
     total_cells = X_test.shape[0] * X_test.shape[1]
     res = []
     for n in range(X_test.shape[0]):
-        corrupted_score = clf.score(data_corruptor.get_dataset_with_corrupted_cell_in_column(column_to_test), y_test)
+        #tmp = data_corruptor.get_dataset_with_corrupted_cell_in_column(column_to_test)
+        corrupted_score = clf.score(X_test, y_test)
         res.append([(n / X_test.shape[0]), corrupted_score])
     df = pd.DataFrame(res, columns=['%Corrupted', 'Score'])
 
@@ -52,32 +53,73 @@ def measure_error_auc(clf, X_test, y_test, feature_cols,column_to_test):
 
 
 def load_data():
-    df = pd.read_csv('../amit/data.csv')
+    df = pd.read_csv('../Amit/data.csv')
     df['diagnosis'] = df['diagnosis'].apply(lambda x: 1 if x == "M" else 0)
     y = df['diagnosis']
     X = df.drop(['diagnosis', 'id'], axis=1)
 
     return X, y
 
-def load_airbnb_data():
-    df = pd.read_csv('./amit/Airbnb/')
 
-X,y = load_data()
+def load_clean_airbnb_data():
+    df = pd.read_csv('../Amit/Airbnb/clean_train.csv')
+    df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
+    df = df.reset_index()
+    y = df['Price']
+    X = df.drop(['Price', 'index'], axis=1)
 
-columns = X.columns.tolist()
+    return X, y
+
+
+def load_dirty_airbnb_data():
+    df = pd.read_csv('../Amit/Airbnb/dirty_test.csv')
+    df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
+    df = df.reset_index()
+
+    y = df['Price']
+    X = df.drop(['Price', 'index'], axis=1)
+    return X, y
+
+X,y = load_clean_airbnb_data()
+
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.50, random_state=42)
+     X, y, test_size=0.20, random_state=42)
 
-results =[]
-for col in columns:
-    fitted_pipeline = get_pipeline(X_train).fit(X_train, y_train)
-    results.append([col,measure_error_auc(fitted_pipeline,X_test,y_test,columns,col)])
+#X_train, y_train = load_clean_airbnb_data()
+#X_test, y_test = load_dirty_airbnb_data()
+pipeline = get_pipeline(X_train)
+airbnb_cols = X_train.columns
+results = []
 
-print(pd.DataFrame(results, columns=['column','score']).sort_values(by='score', ascending=False))
+for col in airbnb_cols:
+    fitted_pipeline = pipeline.fit(X_train, y_train)
+    print('Trying out: ' + col)
+    results_df = measure_error_auc(fitted_pipeline, X_test, y_test, airbnb_cols, col)
+    results.append([col, results_df])
 
+print(pd.DataFrame(results, columns=['column', 'score']).sort_values(by='score', ascending=False))
 
-print()
-print("")
-print()
-
-
+# X,y = load_data()
+#
+# columns = X.columns.tolist()
+# X_train, X_test, y_train, y_test = train_test_split(
+#     X, y, test_size=0.20, random_state=42)
+#
+# results =[]
+# pipeline = get_pipeline(X_train)
+# for col in columns:
+#     print('Trying out: '+ col)
+#     fitted_pipeline = pipeline.fit(X_train, y_train)
+#     results_df = measure_error_auc(fitted_pipeline, X_test, y_test, columns, col)
+#     results.append([col,results_df])
+#
+#
+#
+# print(pd.DataFrame(results, columns=['column','score']).sort_values(by='score', ascending=False))
+#
+#
+# print()
+# print("")
+# print()
+#
+#

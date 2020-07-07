@@ -32,7 +32,7 @@ class DataCorruptor:
 
         self.data = data.copy()
 
-        self.feature_cols = feature_cols
+        self.feature_cols = feature_cols if type(feature_cols)== list else list(feature_cols)
 
         self.log = log
         self.probability_of_error = 0.95
@@ -123,7 +123,7 @@ class DataCorruptor:
         return row
 
     def _corrupt_value_by_column(self, row, col_name):
-
+        #TODO: The corruption parametrisable
         if is_numeric_dtype(self.data[col_name]):
             draw = choice([#self._switch_column_values,
                           # self._add_noise,
@@ -136,13 +136,13 @@ class DataCorruptor:
         elif is_string_dtype(self.data[col_name]):
             draw = choice([self._insert_empty_string,
                            #self._delete_random_char,
-                           self._replace_char_close_on_keyboard
+                           #self._replace_char_close_on_keyboard
                            #self._swap_random_char
-             ], 1, p=[.5,.5])[0]
+             ], 1, p=[1])[0]
 
             return draw(row, col_name)
 
-    def get_dataset_with_corrupted_col(self, col_name, error_proba=0.15):
+    def get_dataset_with_corrupted_col(self, col_name, error_proba=0.95):
         """
         This function return DataFrame with a given collumn corrupted to a degree controlled by error_proba value.
         :param col_name:
