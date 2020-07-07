@@ -32,7 +32,7 @@ class DataCorruptor:
 
         self.data = data.copy()
 
-        self.feature_cols = feature_cols if type(feature_cols)== list else list(feature_cols)
+        self.feature_cols = feature_cols if type(feature_cols) == list else list(feature_cols)
 
         self.log = log
         self.probability_of_error = 0.95
@@ -122,27 +122,34 @@ class DataCorruptor:
 
         return row
 
-    def _corrupt_value_by_column(self, row, col_name):
-        #TODO: The corruption parametrisable
+    def _corrupt_value_by_column(self, row, col_name, numeric_fn=None, cardinal_fn=None):
+        # TODO: The corruption parametrisable
         if is_numeric_dtype(self.data[col_name]):
-            draw = choice([#self._switch_column_values,
-                          # self._add_noise,
-                        self._insert_nan,
-                        #self._introduce_outlier
-            ], 1,
-                          p=[ 1])[0]
+            if numeric_fn:
+                draw = getattr(self, numeric_fn)
+            else:
+                draw = choice([  # self._switch_column_values,
+                    # self._add_noise,
+                    self._insert_nan,
+                    # self._introduce_outlier
+                ], 1,
+                    p=[1])[0]
             return draw(row, col_name)
 
         elif is_string_dtype(self.data[col_name]):
-            draw = choice([self._insert_empty_string,
-                           #self._delete_random_char,
-                           #self._replace_char_close_on_keyboard
-                           #self._swap_random_char
-             ], 1, p=[1])[0]
+            if cardinal_fn:
+                draw = getattr(self, cardinal_fn)
+            else:
+                draw = choice([self._insert_empty_string,
+                               # self._delete_random_char,
+                               # self._replace_char_close_on_keyboard
+                               # self._swap_random_char
+                               ], 1, p=[1])[0]
 
             return draw(row, col_name)
 
-    def get_dataset_with_corrupted_col(self, col_name, error_proba=0.95):
+    def get_dataset_with_corrupted_col(self, col_name, numeric_corruptor=None,
+                                       cardinal_corruptor=None):
         """
         This function return DataFrame with a given collumn corrupted to a degree controlled by error_proba value.
         :param col_name:
@@ -151,32 +158,39 @@ class DataCorruptor:
         """
         if col_name not in self.feature_cols:
             raise ValueError("Column name is not present in the data")
-        self.probability_of_error = error_proba
         if self.log:
-            print('Corrutping %.2f percent of : %s' % (error_proba, col_name))
-        self.data = self.data.apply(self._corrupt_value_by_column, axis=1, args=(col_name,))  # Iterate over all cols
+            print('Corrutping %.2f percent of : %s' % (100, col_name))
+
+        if not numeric_corruptor or not cardinal_corruptor:
+            numeric_corruptor = '_insert_nan'
+            cardinal_corruptor = '_insert_empty_string'
+
+        self.data = self.data.apply(self._corrupt_value_by_column, axis=1,
+                                    args=(col_name, numeric_corruptor, cardinal_corruptor))  # Iterate over all cols
+
         return self.data
 
     def get_random_indices(self):
         """This function returns a pair for integer indices that are not yet corrupted."""
-        #col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
+        # col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
         # While the selected cell is already corrupted, keep "rolling the dice" until we find one that is not corrupted.
-        #while self.corrupted_cells_mask.iat[row_ix, col_ix] == 1:
+        # while self.corrupted_cells_mask.iat[row_ix, col_ix] == 1:
         #    col_ix, row_ix = np.random.randint(self.data.shape[1]), np.random.randint(self.data.shape[0])
-        #return col_ix, row_ix
+        # return col_ix, row_ix
 
-        non_corrupted_row_col_pairs =[]
+        non_corrupted_row_col_pairs = []
         for col_idx in range(self.data.shape[1]):
-           non_corrupted_cell_row_idx_list = self.data.iloc[:,col_idx].index[self.corrupted_cells_mask.iloc[:,col_idx] == 0].tolist()
-           non_corrupted_row_col_pairs_for_col_idx = list(map(lambda row_index: (self.data.index.get_loc(row_index), col_idx), non_corrupted_cell_row_idx_list))
-           non_corrupted_row_col_pairs.extend(non_corrupted_row_col_pairs_for_col_idx)
+            non_corrupted_cell_row_idx_list = self.data.iloc[:, col_idx].index[
+                self.corrupted_cells_mask.iloc[:, col_idx] == 0].tolist()
+            non_corrupted_row_col_pairs_for_col_idx = list(
+                map(lambda row_index: (self.data.index.get_loc(row_index), col_idx), non_corrupted_cell_row_idx_list))
+            non_corrupted_row_col_pairs.extend(non_corrupted_row_col_pairs_for_col_idx)
 
         rand_idx = np.random.randint(len(non_corrupted_row_col_pairs), size=1)[0]
         return non_corrupted_row_col_pairs[rand_idx]
 
-
     def get_dataset_with_corrupted_cell(self):
-        row_idx,col_idx = self.get_random_indices()
+        row_idx, col_idx = self.get_random_indices()
 
         row_with_corrupted_cell = self._corrupt_value_by_column(self.data.iloc[row_idx],
                                                                 self.feature_cols[col_idx])
@@ -185,14 +199,14 @@ class DataCorruptor:
 
         return self.data
 
+    def get_random_row_index(self, col_idx):
 
-    def get_random_row_index(self,col_idx):
-
-        non_corrupted_cell_row_idx_list = self.data.iloc[:,col_idx].index[self.corrupted_cells_mask.iloc[:,col_idx] == 0].tolist()
+        non_corrupted_cell_row_idx_list = self.data.iloc[:, col_idx].index[
+            self.corrupted_cells_mask.iloc[:, col_idx] == 0].tolist()
         row_idx = np.random.choice(non_corrupted_cell_row_idx_list, 1)[0]
         return row_idx
 
-    def get_dataset_with_corrupted_cell_in_column(self,col_name):
+    def get_dataset_with_corrupted_cell_in_column(self, col_name):
         if col_name not in self.feature_cols:
             raise ValueError("Column name is not present in the data")
         col_idx = self.feature_cols.index(col_name)
@@ -204,15 +218,15 @@ class DataCorruptor:
         self.corrupted_cells_mask.iat[self.data.index.get_loc(row_idx), col_idx] = 1
         return self.data
 
-#print('Quick smoke test')    
-#df = pd.DataFrame([[30, 20, 0.1, 'lmao'], [10, 50, 0.5, 'omfg'], [15, 30, 0.2, 'wtfp']], columns=['A', 'B', 'C', "D"])
+# print('Quick smoke test')
+# df = pd.DataFrame([[30, 20, 0.1, 'lmao'], [10, 50, 0.5, 'omfg'], [15, 30, 0.2, 'wtfp']], columns=['A', 'B', 'C', "D"])
 
-#data_corruptor = DataCorruptor(df, df.columns.tolist())
+# data_corruptor = DataCorruptor(df, df.columns.tolist())
 
 # print(data_corruptor.get_dataset_with_corrupted_cell())
 # print(data_corruptor.get_dataset_with_corrupted_cell())
 
-#data_corruptor.get_dataset_with_corrupted_cell()
-#data_corruptor.get_dataset_with_corrupted_cell()
-#print(data_corruptor.get_dataset_with_corrupted_cell())
-#print(data_corruptor.corrupted_cells_mask)
+# data_corruptor.get_dataset_with_corrupted_cell()
+# data_corruptor.get_dataset_with_corrupted_cell()
+# print(data_corruptor.get_dataset_with_corrupted_cell())
+# print(data_corruptor.corrupted_cells_mask)

@@ -19,6 +19,7 @@ class Naive_Error_Ranking:
         self.feature_columns = X.columns
 
         self.pipeline.fit(self.X_train, self.y_train)
+        #TODO: Take corruption params
         self.data_corruptor = DataCorruptor(self.X_test, X.columns)
 
         self._get_baseline_score()
@@ -32,7 +33,7 @@ class Naive_Error_Ranking:
         res_ = []
         print()
         for idx, column in enumerate(self.feature_columns):
-            corrupted_score = self.pipeline.score(self.data_corruptor.get_dataset_with_corrupted_col(column),
+            corrupted_score = self.pipeline.score(self.data_corruptor.get_dataset_with_corrupted_col(column,'_introduce_outlier','_insert_empty_string'),
                                                   self.y_test)
             loss = corrupted_score - self.clean_test_baseline
             res_.append([column, corrupted_score, loss])
@@ -47,7 +48,7 @@ def get_pipeline(X, model=None):
     categorical_features = X.select_dtypes(include="object").columns.to_list()
 
     if model is None:
-        model = LogisticRegression()
+        model = LogisticRegression(C=0.001)
     # TODO: Make this funtion parametrisable so it takes numeric/categorical transofmers as parameters
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),

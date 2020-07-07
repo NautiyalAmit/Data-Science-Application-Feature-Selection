@@ -37,7 +37,7 @@ def get_pipeline(X, model=None):
     categorical_features = X.select_dtypes(include="object").columns.to_list()
 
     if model is None:
-        model = LogisticRegression()
+        model = LogisticRegression(C=0.001)
     # TODO: Make this funtion parametrisable so it takes numeric/categorical transofmers as parameters
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
