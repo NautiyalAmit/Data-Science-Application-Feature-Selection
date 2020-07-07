@@ -9,21 +9,24 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.compose import ColumnTransformer
-
+import traceback
 
 # mp.set_start_method('spawn', force=True)
 
 
 # This function returns you a pippeline for specified features representation
 def measure_error_auc(clf, X_test, y_test, feature_cols):
-    data_corruptor = DataCorruptor(X_test, feature_cols,log=False)
-    total_cells = X_test.shape[0] * X_test.shape[1]
-    res = []
-    for n in range(total_cells):
-        corrupted_score = clf.score(data_corruptor.get_dataset_with_corrupted_cell(), y_test)
-        res.append([(n / total_cells), corrupted_score])
-    df = pd.DataFrame(res, columns=['%Corrupted', 'Score'])
-
+    try:
+        data_corruptor = DataCorruptor(X_test, feature_cols, log=False)
+        total_cells = X_test.shape[0] * X_test.shape[1]
+        res = []
+        for n in range(total_cells):
+            corrupted_score = clf.score(data_corruptor.get_dataset_with_corrupted_cell(), y_test)
+            res.append([(n / total_cells), corrupted_score])
+        df = pd.DataFrame(res, columns=['%Corrupted', 'Score'])
+    except Exception as e:
+        print(e)
+        print(traceback.format_exc())
     # print('Area under the curve {}'.format(np.trapz(df['Score'],df['%Corrupted'])))
     return np.trapz(df['Score'], df['%Corrupted'])
 
@@ -54,6 +57,7 @@ def get_pipeline(X, model=None):
 
 
 def split_fit_corrupt_measure(X,y, train_index, test_index, list_without_feature):
+
     X_train, _X_test = X[list_without_feature].iloc[train_index], X[list_without_feature].iloc[test_index]
     y_train, _y_test = y[train_index], y[test_index]
     #print(_X_test.shape,_y_test.shape)

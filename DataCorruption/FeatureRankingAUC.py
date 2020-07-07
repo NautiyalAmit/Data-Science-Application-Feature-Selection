@@ -59,15 +59,25 @@ def load_data():
 
     return X, y
 
+def load_airbnb_data():
+    df = pd.read_csv('./amit/Airbnb/')
 
 X,y = load_data()
 
 columns = X.columns.tolist()
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.50, random_state=42)
 
-
+results =[]
 for col in columns:
-    print(col)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.50, random_state=42)
     fitted_pipeline = get_pipeline(X_train).fit(X_train, y_train)
-    print(measure_error_auc(fitted_pipeline,X_test,y_test,columns,col))
+    results.append([col,measure_error_auc(fitted_pipeline,X_test,y_test,columns,col)])
+
+print(pd.DataFrame(results, columns=['column','score']).sort_values(by='score', ascending=False))
+
+
+print()
+print("")
+print()
+
+

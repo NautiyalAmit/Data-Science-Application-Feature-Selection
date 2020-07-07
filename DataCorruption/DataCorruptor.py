@@ -181,7 +181,7 @@ class DataCorruptor:
         row_with_corrupted_cell = self._corrupt_value_by_column(self.data.iloc[row_idx],
                                                                 self.feature_cols[col_idx])
         self.data.iloc[row_idx] = row_with_corrupted_cell
-        self.corrupted_cells_mask.iat[self.data.index.get_loc(row_idx), col_idx] = 1
+        self.corrupted_cells_mask.iat[row_idx, col_idx] = 1
 
         return self.data
 
