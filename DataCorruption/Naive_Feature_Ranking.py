@@ -5,8 +5,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.compose import ColumnTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.tree import DecisionTreeRegressor
 
 
 class Naive_Error_Ranking:
@@ -19,7 +22,7 @@ class Naive_Error_Ranking:
         self.feature_columns = X.columns
 
         self.pipeline.fit(self.X_train, self.y_train)
-        #TODO: Take corruption params
+        # TODO: Take corruption params
         self.data_corruptor = DataCorruptor(self.X_test, X.columns)
 
         self._get_baseline_score()
@@ -33,8 +36,10 @@ class Naive_Error_Ranking:
         res_ = []
         print()
         for idx, column in enumerate(self.feature_columns):
-            corrupted_score = self.pipeline.score(self.data_corruptor.get_dataset_with_corrupted_col(column,'_introduce_outlier','_insert_empty_string'),
-                                                  self.y_test)
+            corrupted_score = self.pipeline.score(
+                self.data_corruptor.get_dataset_with_corrupted_col(column, '_introduce_outlier',
+                                                                   '_insert_empty_string'),
+                self.y_test)
             loss = corrupted_score - self.clean_test_baseline
             res_.append([column, corrupted_score, loss])
             print(column + " model score: %.6f" % corrupted_score)
@@ -48,7 +53,7 @@ def get_pipeline(X, model=None):
     categorical_features = X.select_dtypes(include="object").columns.to_list()
 
     if model is None:
-        model = LogisticRegression(C=0.001)
+        model =  LogisticRegression(C=10)
     # TODO: Make this funtion parametrisable so it takes numeric/categorical transofmers as parameters
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
@@ -78,9 +83,67 @@ def load_clean_airbnb_data():
     return X, y
 
 
-X, y = load_clean_airbnb_data()
-pipeline = get_pipeline(X)
+def load_dirty_airbnb_data():
+    df = pd.read_csv('../Amit/Airbnb/duplicates/dirty_test.csv')
+    df['Rating'] = df['Rating'].apply(lambda x: 1 if x == "Y" else 0)
+    df = df.reset_index()
 
-NER = Naive_Error_Ranking(X, y, pipeline)
+    y = df['Rating']
+    X = df.drop(['Rating', 'index'], axis=1)
+    return X, y
 
-print(pd.DataFrame(NER(), columns=['ColumnName', 'CorruptedScore', "Loss"]).sort_values(by='Loss', ascending=False))
+
+clean_X, clean_y = load_clean_airbnb_data()
+pipeline = get_pipeline(clean_X)
+
+NER = Naive_Error_Ranking(clean_X, clean_y, pipeline)
+
+# top_k_df = pd.DataFrame(NER(), columns=['ColumnName', 'CorruptedScore', "Loss"]).sort_values(by='Loss', ascending=False)
+top_k_df = pd.read_pickle('ranking_pickle')
+
+dirty_X, dirty_y = load_dirty_airbnb_data()
+
+
+def experiment_with_ranking(X, y, split=False, clean_train_X=None, clean_train_y=None):
+    if split:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.20, random_state=42)
+        results_ = []
+        for top_k in range(len(top_k_df)):
+            top_k += 1
+            top_k_columns = top_k_df.head(top_k)["ColumnName"].values
+
+            tmp_X = X_train[top_k_columns]
+            tmp_y = y_train
+            pipeline = get_pipeline(tmp_X).fit(tmp_X, tmp_y)
+
+            score = pipeline.score(X_test[top_k_columns], y_test)
+            res = (len(top_k_columns), score)
+            results_.append(res)
+        return pd.DataFrame(results_, columns=['topk', 'score']).sort_values(by='score', ascending=False)
+
+    else:
+        results_ = []
+        for top_k in range(len(top_k_df)):
+            top_k += 1
+            top_k_columns = top_k_df.head(top_k)["ColumnName"].values
+
+            tmp_X = clean_train_X[top_k_columns]
+            tmp_y = clean_train_y
+            pipeline = get_pipeline(tmp_X).fit(tmp_X, tmp_y)
+
+            score = pipeline.score(X[top_k_columns], y)
+            res = (len(top_k_columns), score)
+            results_.append(res)
+        return pd.DataFrame(results_, columns=['topk', 'score']).sort_values(by='score', ascending=False)
+
+
+print("================================")
+print("Clean Training and test ")
+print(experiment_with_ranking(clean_X, clean_y, split=True))
+#one = experiment_with_ranking(clean_X, clean_y, split=True)
+print("================================")
+print("Clean Training and dirty test ")
+print(experiment_with_ranking(dirty_X, dirty_y, clean_train_X=clean_X, clean_train_y=clean_y))
+#two = experiment_with_ranking(dirty_X, dirty_y, clean_train_X=clean_X, clean_train_y=clean_y)
+print()
