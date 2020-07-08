@@ -48,8 +48,8 @@ def measure_error_auc(clf, X_test, y_test, feature_cols, column_to_test):
     total_cells = X_test.shape[0] * X_test.shape[1]
     res = []
     for n in range(X_test.shape[0]):
-        #tmp = data_corruptor.get_dataset_with_corrupted_cell_in_column(column_to_test)
-        corrupted_score = clf.score(X_test, y_test)
+        tmp = data_corruptor.get_dataset_with_corrupted_cell_in_column(column_to_test)
+        corrupted_score = clf.score(tmp, y_test)
         res.append([(n / X_test.shape[0]), corrupted_score])
     df = pd.DataFrame(res, columns=['%Corrupted', 'Score'])
 

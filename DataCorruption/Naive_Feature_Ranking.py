@@ -37,7 +37,7 @@ class Naive_Error_Ranking:
         print()
         for idx, column in enumerate(self.feature_columns):
             corrupted_score = self.pipeline.score(
-                self.data_corruptor.get_dataset_with_corrupted_col(column, '_introduce_outlier',
+                self.data_corruptor.get_dataset_with_corrupted_col(column, '_insert_nan',
                                                                    '_insert_empty_string'),
                 self.y_test)
             loss = corrupted_score - self.clean_test_baseline
@@ -53,7 +53,7 @@ def get_pipeline(X, model=None):
     categorical_features = X.select_dtypes(include="object").columns.to_list()
 
     if model is None:
-        model =  LogisticRegression(C=10)
+        model = LogisticRegression(C=10)
     # TODO: Make this funtion parametrisable so it takes numeric/categorical transofmers as parameters
     numeric_transformer = Pipeline(steps=[
         ('imputer', SimpleImputer(strategy='median')),
@@ -72,6 +72,10 @@ def get_pipeline(X, model=None):
                            ('classifier', model)])
 
 
+top_10 = ['Bathrooms', 'Bedrooms', 'Beds', 'LocationName', 'NumGuests', 'NumReviews', 'Price', 'latitude', 'longitude',
+          'zipcode']
+
+
 def load_clean_airbnb_data():
     print("Loaded clean AirBnB dataset")
     df = pd.read_csv('../Amit/Airbnb/clean_train.csv')
@@ -79,7 +83,7 @@ def load_clean_airbnb_data():
     df = df.reset_index()
     y = df['Rating']
     X = df.drop(['Rating', 'index'], axis=1)
-
+    X = X[top_10]
     return X, y
 
 
@@ -90,6 +94,22 @@ def load_dirty_airbnb_data():
 
     y = df['Rating']
     X = df.drop(['Rating', 'index'], axis=1)
+    X = X[top_10]
+
+    return X, y
+
+
+def load_data():
+    print("Loaded clean cancer dataset")
+
+    df = pd.read_csv('../Amit/data.csv')
+    df['diagnosis'] = df['diagnosis'].apply(lambda x: 1 if x == "M" else 0)
+    y = df['diagnosis']
+    X = df.drop(['diagnosis', 'id'], axis=1)
+
+    X = X[['texture_mean', 'area_mean', 'fractal_dimension_mean', 'symmetry_se', 'texture_worst', 'perimeter_worst',
+          'smoothness_worst', 'compactness_worst', 'concavity_worst', 'fractal_dimension_worst']]
+
     return X, y
 
 
@@ -98,8 +118,8 @@ pipeline = get_pipeline(clean_X)
 
 NER = Naive_Error_Ranking(clean_X, clean_y, pipeline)
 
-# top_k_df = pd.DataFrame(NER(), columns=['ColumnName', 'CorruptedScore', "Loss"]).sort_values(by='Loss', ascending=False)
-top_k_df = pd.read_pickle('ranking_pickle')
+top_k_df = pd.DataFrame(NER(), columns=['ColumnName', 'CorruptedScore', "Loss"]).sort_values(by='Loss', ascending=False)
+# top_k_df = pd.read_pickle('ranking_pickle')
 
 dirty_X, dirty_y = load_dirty_airbnb_data()
 
@@ -139,11 +159,22 @@ def experiment_with_ranking(X, y, split=False, clean_train_X=None, clean_train_y
 
 
 print("================================")
-print("Clean Training and test ")
+print("Airbnb Clean Training and test ")
 print(experiment_with_ranking(clean_X, clean_y, split=True))
-#one = experiment_with_ranking(clean_X, clean_y, split=True)
+# one = experiment_with_ranking(clean_X, clean_y, split=True)
 print("================================")
-print("Clean Training and dirty test ")
+print("Airbnb Clean Training and dirty test ")
 print(experiment_with_ranking(dirty_X, dirty_y, clean_train_X=clean_X, clean_train_y=clean_y))
-#two = experiment_with_ranking(dirty_X, dirty_y, clean_train_X=clean_X, clean_train_y=clean_y)
+# two = experiment_with_ranking(dirty_X, dirty_y, clean_train_X=clean_X, clean_train_y=clean_y)
 print()
+
+print("================================")
+print(" Cancer Clean Training and test ")
+
+X, y = load_data()
+pipeline = get_pipeline(X)
+
+NER = Naive_Error_Ranking(X, y, pipeline)
+top_k_df = pd.DataFrame(NER(), columns=['ColumnName', 'CorruptedScore', "Loss"]).sort_values(by='Loss', ascending=False)
+
+print(experiment_with_ranking(X, y, split=True))
