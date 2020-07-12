@@ -14,7 +14,6 @@ import traceback
 # mp.set_start_method('spawn', force=True)
 
 
-# This function returns you a pippeline for specified features representation
 def measure_error_auc(clf, X_test, y_test, feature_cols):
     try:
         data_corruptor = DataCorruptor(X_test, feature_cols, log=False)
