@@ -12,14 +12,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.compose import ColumnTransformer
 import traceback
-
+import time
 
 class Error_Robustness_Scorer:
 
     def __init__(self, X, y, estimator=None):
 
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            X, y, test_size=0.01, random_state=42)
+            X, y, test_size=0.10, random_state=42)
         self.feature_cols = X.columns
 
         self.pipeline = self.get_pipeline(self.X_train, estimator).fit(self.X_train, self.y_train)
@@ -49,19 +49,44 @@ class Error_Robustness_Scorer:
                                ('classifier', model)])
 
     def measure_error_auc(self):
+        pool = mp.Pool(mp.cpu_count() - 1)
+        results = []
+
+        def log_result(x):
+            #print('Logging ', x)
+            results.append(x)
+
         try:
             data_corruptor = DataCorruptor(self.X_test, self.feature_cols, log=False)
             total_cells = self.X_test.shape[0] * self.X_test.shape[1]
             res = []
             for n in range(total_cells):
-                corrupted_score = self.pipeline.score(data_corruptor.get_dataset_with_corrupted_cell(), self.y_test)
-                res.append([(n / total_cells), corrupted_score])
-            df = pd.DataFrame(res, columns=['%Corrupted', 'Score'])
+                # corrupted_score = self.pipeline.score(data_corruptor.get_dataset_with_corrupted_cell(), self.y_test)
+                d = data_corruptor.get_dataset_with_corrupted_cell().copy()
+                t = self.y_test.copy()
+                try:
+                    pool.apply_async(self.measure, args=(self.pipeline,d, t,float(n/total_cells)),
+                                     callback=log_result)
+                except Exception as err:
+                    print(err)
+                # Close the pool for new tasks
+            pool.close()
+
+            # Wait for all tasks to complete at this point
+            pool.join()
+            # res.append([(n / total_cells), corrupted_score])
+            df = pd.DataFrame(results, columns=['%Corrupted', 'Score'])
+
+
         except Exception as e:
             print(e)
             print(traceback.format_exc())
         # print('Area under the curve {}'.format(np.trapz(df['Score'],df['%Corrupted'])))
         return np.trapz(df['Score'], df['%Corrupted'])
+
+    @staticmethod
+    def measure(p, d, t,percentage):
+        return percentage,p.score(d,t)
 
 
 def load_clean_airbnb_data():
@@ -74,9 +99,17 @@ def load_clean_airbnb_data():
     # X = X[top_10]
     return X, y
 
-X,y = load_clean_airbnb_data()
 
-print(Error_Robustness_Scorer(X,y).measure_error_auc())
-print(Error_Robustness_Scorer(X,y).measure_error_auc())
-print(Error_Robustness_Scorer(X,y).measure_error_auc())
-print(Error_Robustness_Scorer(X,y).measure_error_auc())
+top_k_df = pd.read_pickle('ranking_pickle')
+X, y = load_clean_airbnb_data()
+res = []
+for top_k in range(len(top_k_df)):
+    top_k += 1
+    top_k_columns = top_k_df.head(top_k)["ColumnName"].values
+    start_time = time.time()
+
+    scr = [top_k, Error_Robustness_Scorer(X[top_k_columns], y).measure_error_auc(),(time.time() - start_time)]
+    print(scr)
+    res.append(scr)
+
+print(pd.DataFrame(res, columns=['column', 'score','duration']).sort_values(by='score', ascending=False))
