@@ -83,7 +83,7 @@ def load_clean_airbnb_data():
     df = df.reset_index()
     y = df['Rating']
     X = df.drop(['Rating', 'index'], axis=1)
-    X = X[top_10]
+    # X = X[top_10]
     return X, y
 
 
@@ -94,7 +94,7 @@ def load_dirty_airbnb_data():
 
     y = df['Rating']
     X = df.drop(['Rating', 'index'], axis=1)
-    X = X[top_10]
+    # X = X[top_10]
 
     return X, y
 
@@ -107,8 +107,8 @@ def load_data():
     y = df['diagnosis']
     X = df.drop(['diagnosis', 'id'], axis=1)
 
-    X = X[['texture_mean', 'area_mean', 'fractal_dimension_mean', 'symmetry_se', 'texture_worst', 'perimeter_worst',
-          'smoothness_worst', 'compactness_worst', 'concavity_worst', 'fractal_dimension_worst']]
+    # X = X[['texture_mean', 'area_mean', 'fractal_dimension_mean', 'symmetry_se', 'texture_worst', 'perimeter_worst',
+    #       'smoothness_worst', 'compactness_worst', 'concavity_worst', 'fractal_dimension_worst']]
 
     return X, y
 
@@ -125,10 +125,11 @@ dirty_X, dirty_y = load_dirty_airbnb_data()
 
 
 def experiment_with_ranking(X, y, split=False, clean_train_X=None, clean_train_y=None):
+    results_ = []
+
     if split:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.20, random_state=42)
-        results_ = []
         for top_k in range(len(top_k_df)):
             top_k += 1
             top_k_columns = top_k_df.head(top_k)["ColumnName"].values
@@ -140,10 +141,8 @@ def experiment_with_ranking(X, y, split=False, clean_train_X=None, clean_train_y
             score = pipeline.score(X_test[top_k_columns], y_test)
             res = (len(top_k_columns), score)
             results_.append(res)
-        return pd.DataFrame(results_, columns=['topk', 'score']).sort_values(by='score', ascending=False)
 
     else:
-        results_ = []
         for top_k in range(len(top_k_df)):
             top_k += 1
             top_k_columns = top_k_df.head(top_k)["ColumnName"].values
@@ -155,7 +154,8 @@ def experiment_with_ranking(X, y, split=False, clean_train_X=None, clean_train_y
             score = pipeline.score(X[top_k_columns], y)
             res = (len(top_k_columns), score)
             results_.append(res)
-        return pd.DataFrame(results_, columns=['topk', 'score']).sort_values(by='score', ascending=False)
+
+    return pd.DataFrame(results_, columns=['topk', 'score']).sort_values(by='score', ascending=False)
 
 
 print("================================")
