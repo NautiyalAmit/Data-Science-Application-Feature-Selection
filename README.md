@@ -1,8 +1,8 @@
 # Data-Science-Application-Feature-Selection
 ## Feature Selection for Data-Error-Robustness
 A data scientist is driven by business needs. For instance, the ML application requires a certain
-classification accuracy, low inference time, fairness, and robustness against data errors [3].
-Feature selection [1] is one important part of the ML pipeline and in fact, by selecting the right
+classification accuracy, low inference time, fairness, and robustness against data errors.
+Feature selection is one important part of the ML pipeline and in fact, by selecting the right
 features, the data scientist can ensure to achieve all these ML application constraints.
 For instance, if the data scientist knows up-front that the data might suffer data quality issues,
 she can remove those features that impair the model quality the most in case of quality issues.
